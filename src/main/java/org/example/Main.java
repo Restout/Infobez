@@ -1,25 +1,112 @@
 package org.example;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Main {
 
+    private static final int CONSOLE_VALUE = 1;
+    private static final int FILE_VALUE = 2;
+    private static final Scanner scanner = new Scanner(System.in);
+
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        var mode = getMode();
+        var text = getText();
 
-        // Ввод текста и ключевого слова
-        System.out.println("Введите текст:");
-        String text = scanner.nextLine();
+        switch (mode) {
+            case (1): {
+                var keyword = getKeyWord();
+                // Режим шифрования
+                String encryptedText = encryptText(text, keyword);
+                saveResult(encryptedText, "зашифрованный");
+                break;
+            }
+            case (2): {
+                var keyword = getKeyWord();
+                // Режим расшифровки
+                String decryptedText = decryptText(text, keyword);
+                saveResult(decryptedText, "расшифрованный");
+            }
+            case (3): {
+                var result = getResult();
+                //Режим взлома
+                String decryptedText = crack(text, result);
+                saveResult(decryptedText, "расшифрованный");
+            }
+            default: {
+                System.out.println("Некорректный выбор режима.");
+            }
+        }
+    }
+
+    private static int getMode() {
+        System.out.println("Выберите режим работы:");
+        System.out.println("1. Шифрование");
+        System.out.println("2. Расшифровка");
+        System.out.println("3. Режим взлома");
+        int mode = scanner.nextInt();
+        scanner.nextLine();
+        return mode;
+    }
+
+    private static String getKeyWord() {
         System.out.println("Введите ключевое слово:");
-        String keyword = scanner.nextLine();
+        return scanner.nextLine();
+    }
 
-        // Кодируем текст
-        String encryptedText = encryptText(text, keyword);
-        System.out.println("\nЗашифрованный текст: " + encryptedText);
+    private static String getResult() {
+        System.out.println("Введите какой должен быть результат:");
+        return scanner.nextLine();
+    }
 
-        // Расшифровываем текст обратно
-        String decryptedText = decryptText(encryptedText, keyword);
-        System.out.println("\nРасшифрованный текст: " + decryptedText);
+    private static String getText() {
+        System.out.println("Выберите источник текста:");
+        System.out.println("1. Ввести текст вручную");
+        System.out.println("2. Прочитать текст из файла");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
+        String text;
+        switch (choice) {
+            case CONSOLE_VALUE: {
+                text = getTextFromConsole();
+                break;
+            }
+            case FILE_VALUE: {
+                text = getTextFromFile();
+                break;
+            }
+            default: {
+                System.out.println("Некорректный выбор.");
+                return null;
+            }
+        }
+        return text.trim().toLowerCase().replaceAll(" ", "");
+    }
+
+    private static String getTextFromFile() {
+        String text;
+        System.out.println("Введите путь к файлу:");
+        String filePath = scanner.nextLine();
+        try {
+            text = new String(Files.readAllBytes(Paths.get(filePath)));
+        } catch (IOException e) {
+            System.out.println("Ошибка при чтении файла: " + e.getMessage());
+            return "";
+        }
+        return text;
+    }
+
+    private static String getTextFromConsole() {
+        String text;
+        System.out.println("Введите текст:");
+
+        text = scanner.nextLine();
+        return text;
     }
 
     // Метод для кодирования текста
@@ -183,6 +270,165 @@ public class Main {
         }
 
         return order;
+    }
+
+    private static void saveResult(String resultText, String operation) {
+        System.out.println("Выберите, куда сохранить результат:");
+        System.out.println("1. Вывести на экран");
+        System.out.println("2. Сохранить в файл");
+        int outputChoice = scanner.nextInt();
+        scanner.nextLine(); // Очистка буфера
+
+        if (outputChoice == 1) {
+            System.out.println("\n" + operation + " текст:");
+            System.out.println(resultText);
+        } else if (outputChoice == 2) {
+            System.out.println("Введите путь для сохранения файла:");
+            String relativePath = scanner.nextLine();
+            try {
+                // Создание пути относительно текущей рабочей директории
+                String currentDir = System.getProperty("user.dir");
+                String filePath = Paths.get(currentDir, relativePath).toString();
+                Path path = Paths.get(filePath);
+
+                // Создание всех необходимых директорий
+                Files.createDirectories(path.getParent());
+
+                // Сохранение результата в файл
+                Files.write(path, resultText.getBytes());
+                System.out.println("Результат успешно сохранён в файл: " + filePath);
+            } catch (IOException e) {
+                System.out.println("Ошибка при сохранении файла: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Некорректный выбор.");
+        }
+    }
+
+    private static String crack(String encryptedText, String findText) {
+        String result = "Failed to Crack Text";
+        findText = findText.replaceAll(" ", "").trim().toLowerCase();
+
+        for (int i = 2; i <= 11; i++) {
+            System.out.println(i);
+            var permutations = getPermutations(i);
+            boolean textWasFind = false;
+
+            for (int[] permutation : permutations) {
+                var decryptedStr = decryptCrack(encryptedText, permutation);
+
+                if (decryptedStr.equals(findText)) {
+                    textWasFind = true;
+                    result = findText;
+
+                    System.out.println(addAsciiToNumbers(permutation));
+                    System.out.println(Arrays.toString(permutation));
+                    break;
+                }
+            }
+
+            if (textWasFind) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private static String decryptCrack(String encryptedText, int[] order) {
+        var length = order.length;
+        var defaultChar = 'z';
+        var table = new char[length][length];
+        int charIndex = 0;
+
+        // Заполняем таблицу зашифрованного текста
+        for (int i = 0; i < length; i++) {
+            for (int j = 0; j < length; j++) {
+                if (charIndex < encryptedText.length()) {
+                    table[i][j] = encryptedText.charAt(charIndex++);
+                } else {
+                    table[i][j] = defaultChar;
+                }
+            }
+        }
+
+        // Переставляем столбцы обратно в исходный порядок
+        char[][] sortedColumnsTable = new char[length][length];
+        for (int i = 0; i < length; i++) {
+            int oldIndex = order[i];
+            for (int j = 0; j < length; j++) {
+                sortedColumnsTable[j][i] = table[j][oldIndex];
+            }
+        }
+
+        // Восстанавливаем порядок строк, но в обратном порядке
+        int[] rowOrder = order;
+
+        // Переставляем строки обратно в исходный порядок
+        char[][] sortedRowsTable = new char[length][length];
+        for (int i = 0; i < length; i++) {
+            int oldIndex = rowOrder[i];
+            for (int j = 0; j < length; j++) {
+                sortedRowsTable[i][j] = sortedColumnsTable[oldIndex][j];
+            }
+        }
+
+        // Собираем расшифрованный текст
+        StringBuilder decryptedText = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            for (int j = 0; j < length; j++) {
+                decryptedText.append(sortedRowsTable[i][j]);
+            }
+        }
+
+        return decryptedText.toString().replaceAll("z+$", "");
+    }
+
+    public static List<int[]> getPermutations(int size) {
+        List<int[]> result = new ArrayList<>();
+        int[] array = new int[size];
+        for (int i = 0; i < size; i++) {
+            array[i] = i;
+        }
+        generatePermutations(array, 0, result);
+        return result;
+    }
+
+    private static void generatePermutations(int[] array, int index, List<int[]> result) {
+        if (index == array.length) {
+            result.add(array.clone());  // Добавляем текущую перестановку
+            return;
+        }
+
+        for (int i = index; i < array.length; i++) {
+            swap(array, i, index);  // Меняем элементы
+            generatePermutations(array, index + 1, result);  // Рекурсивный вызов
+            swap(array, i, index);  // Возвращаем элементы на место (backtrack)
+        }
+    }
+
+    private static void swap(int[] array, int i, int j) {
+        int temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+
+
+    public static String addAsciiToNumbers(int[] numbers) {
+        StringBuilder result = new StringBuilder();
+
+        // Кодировка буквы 'a' в ASCII
+        int asciiA = 97;
+
+        // Проходим по массиву чисел
+        for (int number : numbers) {
+            // Прибавляем к числу кодировку буквы 'a' и преобразуем в символ
+            char newChar = (char) (number + asciiA);
+            // Добавляем символ в строку
+            result.append(newChar);
+        }
+
+        // Возвращаем строку
+        return result.toString();
     }
 
     // Метод для печати таблицы
