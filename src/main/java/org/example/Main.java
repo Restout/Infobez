@@ -23,15 +23,38 @@ public class Main {
             case (1): {
                 String keyword = getKeyWord();
                 // Режим шифрования
-                String encryptedText = encryptText(text, keyword);
-                saveResult(encryptedText, "зашифрованный");
+                double lenSqr = Math.pow(keyword.length(), 2);
+                int blocks = (int) Math.ceil(text.length() / lenSqr);
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < blocks; i++) {
+                    String textBlock;
+                    if (i != blocks - 1) {
+                        textBlock = text.substring(i * (int) lenSqr, (i + 1) * (int) lenSqr);
+                    } else {
+                        textBlock = text.substring(i * (int) lenSqr);
+                    }
+                    builder.append(encryptText(textBlock, keyword));
+                }
+                saveResult(builder.toString(), "зашифрованный");
                 break;
             }
             case (2): {
                 String keyword = getKeyWord();
                 // Режим расшифровки
-                String decryptedText = decryptText(text, keyword);
-                saveResult(decryptedText, "расшифрованный");
+                double lenSqr = Math.pow(keyword.length(), 2);
+                int blocks = (int) Math.ceil(text.length() / lenSqr);
+                StringBuilder builder = new StringBuilder();
+
+                for (int i = 0; i < blocks; i++) {
+                    String textBlock;
+                    if (i != blocks - 1) {
+                        textBlock = text.substring(i * (int) lenSqr, (i + 1) * (int) lenSqr);
+                    } else {
+                        textBlock = text.substring(i * (int) lenSqr);
+                    }
+                    builder.append(decryptText(textBlock, keyword));
+                }
+                saveResult(builder.toString().replaceAll("z+$", ""), "расшифрованный");
                 break;
             }
             case (3): {
@@ -345,9 +368,21 @@ public class Main {
             System.out.println(i);
             List<int[]> permutations = getPermutations(i);
             boolean textWasFind = false;
+            double lenSqr = Math.pow(i, 2);
+            int blocks = (int) Math.ceil(encryptedText.length() / lenSqr);
 
             for (int[] permutation : permutations) {
-                String decryptedStr = decryptCrack(encryptedText, permutation);
+                StringBuilder builder = new StringBuilder();
+                for (int j = 0; j < blocks; j++) {
+                    String textBlock;
+                    if (j != blocks - 1) {
+                        textBlock = encryptedText.substring(j * (int) lenSqr, (j + 1) * (int) lenSqr);
+                    } else {
+                        textBlock = encryptedText.substring(j * (int) lenSqr);
+                    }
+                    builder.append(decryptCrack(textBlock, permutation));
+                }
+                String decryptedStr = builder.toString().replaceAll("z+$", "");
 
                 if (decryptedStr.equals(findText)) {
                     textWasFind = true;
@@ -412,7 +447,7 @@ public class Main {
             }
         }
 
-        return decryptedText.toString().replaceAll("z+$", "");
+        return decryptedText.toString();
     }
 
     public static List<int[]> getPermutations(int size) {
