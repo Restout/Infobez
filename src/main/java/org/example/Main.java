@@ -4,37 +4,42 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.Collator;
 import java.util.*;
 
 public class Main {
 
+    private static final Collator russianCollator = Collator.getInstance(new Locale("ru", "RU"));
+    private static final Collator englishCollator = Collator.getInstance(new Locale("en", "US"));
     private static final int CONSOLE_VALUE = 1;
     private static final int FILE_VALUE = 2;
     private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-        var mode = getMode();
-        var text = getText();
+        int mode = getMode();
+        String text = getText();
 
         switch (mode) {
             case (1): {
-                var keyword = getKeyWord();
+                String keyword = getKeyWord();
                 // Режим шифрования
                 String encryptedText = encryptText(text, keyword);
                 saveResult(encryptedText, "зашифрованный");
                 break;
             }
             case (2): {
-                var keyword = getKeyWord();
+                String keyword = getKeyWord();
                 // Режим расшифровки
                 String decryptedText = decryptText(text, keyword);
                 saveResult(decryptedText, "расшифрованный");
+                break;
             }
             case (3): {
-                var result = getResult();
+                String result = getResult();
                 //Режим взлома
                 String decryptedText = crack(text, result);
                 saveResult(decryptedText, "расшифрованный");
+                break;
             }
             default: {
                 System.out.println("Некорректный выбор режима.");
@@ -58,8 +63,29 @@ public class Main {
     }
 
     private static String getResult() {
-        System.out.println("Введите какой должен быть результат:");
-        return scanner.nextLine();
+        System.out.println("Выберите как ввести результат:");
+        System.out.println("1. Ввести вручную");
+        System.out.println("2. Прочитать из файла");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
+        String text;
+        switch (choice) {
+            case CONSOLE_VALUE: {
+                text = getTextFromConsole();
+                break;
+            }
+            case FILE_VALUE: {
+                text = getTextFromFile();
+                break;
+            }
+            default: {
+                System.out.println("Некорректный выбор.");
+                return null;
+            }
+        }
+        return text.trim().toLowerCase().replaceAll(" ", "");
     }
 
     private static String getText() {
@@ -241,16 +267,13 @@ public class Main {
     public static int[] getAlphabeticalOrder(String word) {
         // Преобразуем слово в массив символов
         char[] chars = word.toCharArray();
-
         // Сохраняем пары (буква, индекс)
         Character[] charArray = new Character[chars.length];
         for (int i = 0; i < chars.length; i++) {
             charArray[i] = chars[i];
         }
 
-        // Сортируем массив по алфавитному порядку
         Arrays.sort(charArray);
-
         // Создаем список для хранения порядкового номера каждой буквы, учитывая повторения
         Map<Character, List<Integer>> charPositions = new HashMap<>();
 
@@ -270,6 +293,15 @@ public class Main {
         }
 
         return order;
+    }
+
+    private static String detectLanguage(String text) {
+        if (text.matches(".*\\p{IsCyrillic}.*")) {
+            return "ru"; // Русский
+        } else if (text.matches(".*\\p{IsLatin}.*")) {
+            return "en"; // Английский
+        }
+        return "unknown"; // Неопознанный язык
     }
 
     private static void saveResult(String resultText, String operation) {
@@ -311,11 +343,11 @@ public class Main {
 
         for (int i = 2; i <= 11; i++) {
             System.out.println(i);
-            var permutations = getPermutations(i);
+            List<int[]> permutations = getPermutations(i);
             boolean textWasFind = false;
 
             for (int[] permutation : permutations) {
-                var decryptedStr = decryptCrack(encryptedText, permutation);
+                String decryptedStr = decryptCrack(encryptedText, permutation);
 
                 if (decryptedStr.equals(findText)) {
                     textWasFind = true;
@@ -335,9 +367,9 @@ public class Main {
     }
 
     private static String decryptCrack(String encryptedText, int[] order) {
-        var length = order.length;
-        var defaultChar = 'z';
-        var table = new char[length][length];
+        int length = order.length;
+        char defaultChar = 'z';
+        char[][] table = new char[length][length];
         int charIndex = 0;
 
         // Заполняем таблицу зашифрованного текста
